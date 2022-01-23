@@ -55,6 +55,7 @@ type Volume struct {
 }
 
 func rdsGet(client *gophercloud.ServiceClient, rdsId string) (*instances.RdsInstanceResponse, error) {
+
 	listOpts := instances.ListRdsInstanceOpts{
 		Id: rdsId,
 	}
@@ -133,13 +134,11 @@ func rdsCreate(client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts)
 func (c *conf) getConf() *conf {
 
 	yfile, err := ioutil.ReadFile(RdsYaml)
-
 	if err != nil {
 		panic(err)
 	}
 
 	err = yaml.Unmarshal(yfile, c)
-
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +204,6 @@ func main() {
 	}
 
 	rdsCreate(rds, &instances.CreateRdsOpts{})
-
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,9 @@
 
 creates rds ha instances in OTC tenant based on `rds.yaml`
 
+[![CodeQL](https://github.com/eumel8/otc-rds-client/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/eumel8/otc-rds-client/actions/workflows/codeql-analysis.yml)
+
+
 ## example
 
 ```yaml

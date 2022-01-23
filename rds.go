@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/gophercloud/utils/client"
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
-	"github.com/gophercloud/utils/client"
 	"gopkg.in/yaml.v3"
-	"net/http"
 	"io/ioutil"
+	"net/http"
 	"os"
 )
 
@@ -53,6 +53,25 @@ type Volume struct {
 	Size int    `json:"size" required:"true"`
 }
 
+func rdsGet(client *gophercloud.ServiceClient, rdsId string) (*instances.RdsInstanceResponse, error) {
+	listOpts := instances.ListRdsInstanceOpts{
+		Id: rdsId,
+	}
+	allPages, err := instances.List(client, listOpts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	n, err := instances.ExtractRdsInstances(allPages)
+	if err != nil {
+		return nil, err
+	}
+	if len(n.Instances) == 0 {
+		return nil, nil
+	}
+	return &n.Instances[0], nil
+}
+
 func rdsCreate(client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts) {
 
 	var c conf
@@ -85,12 +104,28 @@ func rdsCreate(client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts)
 		SubnetId:         c.SubnetId,
 		SecurityGroupId:  c.SecurityGroupId,
 	}
-	fmt.Println("create options:", createOpts.BackupStrategy.StartTime)
+
 	createResult := instances.Create(client, createOpts)
-	_, err := createResult.Extract()
+	r, err := createResult.Extract()
 	if err != nil {
 		panic(err)
 	}
+	jobResponse, err := createResult.ExtractJobResponse()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := instances.WaitForJobCompleted(client, int(1800), jobResponse.JobID); err != nil {
+		panic(err)
+	}
+
+	rdsInstance, err := rdsGet(client, r.Instance.Id)
+
+	fmt.Println(rdsInstance.PrivateIps[0])
+	if err != nil {
+		panic(err)
+	}
+
 	return
 }
 

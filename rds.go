@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	AppVersion = "0.0.1"
+	AppVersion = "0.0.3"
+	RdsYaml =  "rds.yaml"
 )
 
 type conf struct {
@@ -131,7 +132,7 @@ func rdsCreate(client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts)
 
 func (c *conf) getConf() *conf {
 
-	yfile, err := ioutil.ReadFile("mydb.yaml")
+	yfile, err := ioutil.ReadFile(RdsYaml)
 
 	if err != nil {
 		panic(err)
@@ -204,6 +205,7 @@ func main() {
 	}
 
 	rdsCreate(rds, &instances.CreateRdsOpts{})
+
 	if err != nil {
 		panic(err)
 	}

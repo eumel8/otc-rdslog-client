@@ -26,9 +26,9 @@ backupstrategy:
 flavorref: "rds.mysql.c2.xlarge.ha"
 region: "eu-de"
 availabilityzone: "eu-de-01,eu-de-02"
-vpcid: "438198fc-92eb-4cff-bc50-7c50d82e142e"
-subnetid: "475d82aa-d3af-408c-a861-81aede814ebf"
-securitygroupid: "153e692c-afa2-450b-940a-e646c55f2f0c"
+vpc: "golang"
+subnet: "golang"
+securitygroup: "golang"
 ```
 
 ## usage

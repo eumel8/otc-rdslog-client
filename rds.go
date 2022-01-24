@@ -1,13 +1,16 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/gophercloud/utils/client"
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/subnets"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/vpcs"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"net/http"
@@ -30,10 +33,9 @@ type conf struct {
 	Volume           *Volume         `yaml:"volume"`
 	Region           string          `yaml:"region"`
 	AvailabilityZone string          `yaml:"availabilityzone"`
-	VpcId            string          `yaml:"vpcid"`
-	VpcName          string          `yaml:"vpcname"`
-	SubnetId         string          `yaml:"subnetid"`
-	SecurityGroupId  string          `yaml:"securitygroupid"`
+	Vpc              string          `yaml:"vpc"`
+	Subnet           string          `yaml:"subnet"`
+	SecurityGroup    string          `yaml:"securitygroup"`
 }
 
 type Datastore struct {
@@ -56,11 +58,50 @@ type Volume struct {
 	Size int    `json:"size" required:"true"`
 }
 
+
+func funcError(e string) {
+        msg := errors.New(e)
+	fmt.Println("ERROR:", msg)
+	os.Exit(1)
+	return
+}
+
+func secgroupGet(client *gophercloud.ServiceClient, opts *groups.ListOpts) (*groups.SecGroup, error) {
+
+	pages,err := groups.List(client, *opts).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	n, err := groups.ExtractGroups(pages)
+	if len(n) == 0 {
+		funcError("No SecurityGroups found")
+	}
+
+	return &n[0],nil
+}
+
+func subnetGet(client *gophercloud.ServiceClient, opts *subnets.ListOpts) (*subnets.Subnet, error) {
+
+	n, err := subnets.List(client, *opts)
+	if err != nil {
+		return nil, err
+	}
+	if len(n) == 0 {
+		funcError("No Subnet found")
+	}
+
+	return &n[0], nil
+}
+
 func vpcGet(client *gophercloud.ServiceClient, opts *vpcs.ListOpts) (*vpcs.Vpc, error) {
 
 	n, err := vpcs.List(client, *opts)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(n) == 0 {
+		funcError("No VPC found")
 	}
 
 	return &n[0], nil
@@ -86,16 +127,25 @@ func rdsGet(client *gophercloud.ServiceClient, rdsId string) (*instances.RdsInst
 	return &n.Instances[0], nil
 }
 
-func rdsCreate(netclient *gophercloud.ServiceClient, client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts) {
+func rdsCreate(netclient1 *gophercloud.ServiceClient, netclient2 *gophercloud.ServiceClient, client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts) {
 
 	var c conf
 	c.getConf()
 
-	v, err := vpcGet(netclient, &vpcs.ListOpts{Name: c.VpcName})
+	g, err := secgroupGet(netclient2, &groups.ListOpts{Name: c.SecurityGroup})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("vpcid ", v.ID)
+
+	s, err := subnetGet(netclient1, &subnets.ListOpts{Name: c.Subnet})
+	if err != nil {
+		panic(err)
+	}
+
+	v, err := vpcGet(netclient1, &vpcs.ListOpts{Name: c.Vpc})
+	if err != nil {
+		panic(err)
+	}
 
 	createOpts := instances.CreateRdsOpts{
 		Name: c.Name,
@@ -120,9 +170,9 @@ func rdsCreate(netclient *gophercloud.ServiceClient, client *gophercloud.Service
 		},
 		Region:           c.Region,
 		AvailabilityZone: c.AvailabilityZone,
-		VpcId:            c.VpcId,
-		SubnetId:         c.SubnetId,
-		SecurityGroupId:  c.SecurityGroupId,
+		VpcId:            v.ID,
+		SubnetId:         s.ID,
+		SecurityGroupId:  g.ID,
 	}
 
 	createResult := instances.Create(client, createOpts)
@@ -216,13 +266,14 @@ func main() {
 		}
 	}
 
-	network, err := openstack.NewNetworkV1(provider, gophercloud.EndpointOpts{})
+	network1, err := openstack.NewNetworkV1(provider, gophercloud.EndpointOpts{})
+	network2, err := openstack.NewNetworkV2(provider, gophercloud.EndpointOpts{})
 	rds, err := openstack.NewRDSV3(provider, gophercloud.EndpointOpts{})
 	if err != nil {
 		panic(err)
 	}
 
-	rdsCreate(network, rds, &instances.CreateRdsOpts{})
+	rdsCreate(network1, network2, rds, &instances.CreateRdsOpts{})
 	if err != nil {
 		panic(err)
 	}

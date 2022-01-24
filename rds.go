@@ -7,6 +7,7 @@ import (
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/vpcs"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 
 const (
 	AppVersion = "0.0.3"
-	RdsYaml =  "rds.yaml"
+	RdsYaml    = "rds.yaml"
 )
 
 type conf struct {
@@ -30,6 +31,7 @@ type conf struct {
 	Region           string          `yaml:"region"`
 	AvailabilityZone string          `yaml:"availabilityzone"`
 	VpcId            string          `yaml:"vpcid"`
+	VpcName          string          `yaml:"vpcname"`
 	SubnetId         string          `yaml:"subnetid"`
 	SecurityGroupId  string          `yaml:"securitygroupid"`
 }
@@ -54,6 +56,16 @@ type Volume struct {
 	Size int    `json:"size" required:"true"`
 }
 
+func vpcGet(client *gophercloud.ServiceClient, opts *vpcs.ListOpts) (*vpcs.Vpc, error) {
+
+	n, err := vpcs.List(client, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &n[0], nil
+}
+
 func rdsGet(client *gophercloud.ServiceClient, rdsId string) (*instances.RdsInstanceResponse, error) {
 
 	listOpts := instances.ListRdsInstanceOpts{
@@ -74,10 +86,16 @@ func rdsGet(client *gophercloud.ServiceClient, rdsId string) (*instances.RdsInst
 	return &n.Instances[0], nil
 }
 
-func rdsCreate(client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts) {
+func rdsCreate(netclient *gophercloud.ServiceClient, client *gophercloud.ServiceClient, opts *instances.CreateRdsOpts) {
 
 	var c conf
 	c.getConf()
+
+	v, err := vpcGet(netclient, &vpcs.ListOpts{Name: c.VpcName})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("vpcid ", v.ID)
 
 	createOpts := instances.CreateRdsOpts{
 		Name: c.Name,
@@ -198,12 +216,13 @@ func main() {
 		}
 	}
 
+	network, err := openstack.NewNetworkV1(provider, gophercloud.EndpointOpts{})
 	rds, err := openstack.NewRDSV3(provider, gophercloud.EndpointOpts{})
 	if err != nil {
 		panic(err)
 	}
 
-	rdsCreate(rds, &instances.CreateRdsOpts{})
+	rdsCreate(network, rds, &instances.CreateRdsOpts{})
 	if err != nil {
 		panic(err)
 	}

@@ -1,0 +1,18 @@
+FROM golang:1.16.3 as builder
+
+RUN mkdir /app
+
+WORKDIR /app
+ADD . /app
+
+RUN go mod download && go mod tidy && go vet . && go build -ldflags="-s -w" -o rds rds.go
+RUN rm -Rf models routers vendor \
+    && rm -f Dockerfile go.mod go.sum
+
+FROM gcr.io/distroless/static
+LABEL org.opencontainers.image.authors="f.kloeker@telekom.de"
+LABEL version="1.0.0"
+LABEL description="Create RDS instance in Open Telekom Cloud (OTC)"
+WORKDIR /app
+COPY --from=builder /app/rds /app/rds
+CMD ["./app/rds"]

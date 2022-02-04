@@ -1,16 +1,34 @@
-FROM golang:1.16.3 as builder
-LABEL maintainer="Frank Kloeker <eumel@arcor.de>"
+FROM golang:alpine AS builder
 
-RUN mkdir /rds
+RUN apk update && apk add --no-cache git
 
-WORKDIR /rds
-ADD . /rds
+WORKDIR /app
 
-RUN go mod download && go mod tidy && go vet . && go build -ldflags="-s -w" -o rds rds.go
-RUN rm -Rf models routers vendor \
-    && rm -f Dockerfile go.mod go.sum
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
 
-FROM gcr.io/distroless/static
-WORKDIR /rds
-COPY --from=builder /rds/rds /rds/rds
-CMD ["./rds"]
+COPY *.go ./
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rds
+
+RUN adduser \    
+    --disabled-password \    
+    --gecos "" \    
+    --home "/app" \    
+    --shell "/sbin/nologin" \    
+    --no-create-home \    
+    --uid 1000 \    
+    appuser
+
+FROM scratch
+LABEL org.opencontainers.image.authors="f.kloeker@telekom.de"
+LABEL version="1.0.0"
+LABEL description="Create RDS instance in Open Telekom Cloud (OTC)"
+
+WORKDIR /app
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /app/rds /app/rds
+USER appuser
+CMD ["/app/rds"]

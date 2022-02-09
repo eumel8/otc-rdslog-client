@@ -8,10 +8,10 @@ import (
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
+	"hiller.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/backups"
 	"net/http"
 	"os"
 	"time"
-	"backups"
 )
 
 const (
@@ -47,14 +47,32 @@ func rdsGetName(client *gophercloud.ServiceClient, rdsName string) (*instances.R
 
 func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts) {
 
+	rawrestoretime := os.Getenv("RDS_RESTORE_TIME")
+	if rawrestoretime == "" {
+		funcError("Missing variable RDS_RESTORE_TIME (e.g. 2020-04-04T22:08:41+00:00)")
+	}
+
+	rdsrestoredate, err := time.Parse(time.RFC3339, rawrestoretime)
+	if err != nil {
+		funcError("Can't parse time format")
+	}
+	rdsrestoretime := rdsrestoredate.Unix()
+
+	rdsname := os.Getenv("RDS_RESTORE_DB")
+
+	if rdsname == "" {
+		funcError("Missing variable RDS_RESTORE_DB (e.g. mydb)")
+	}
+
+	rdsid,err := rdsGetName(client, rdsname)
 	restoreOpts := backups.RestorePITROpts{
 		Source: &backups.Source{
-			InstanceId:  rdsid,
+			InstanceId:  rdsid.Id,
 			RestoreTime: rdsrestoretime,
 			Type:        "timestamp",
 		},
 		Target: &backups.Target{
-			InstanceId: rdsid,
+			InstanceId: rdsid.Id,
 		},
 	}
 
@@ -73,7 +91,7 @@ func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts
 		panic(err)
 	}
 
-	fmt.Println("done")
+	fmt.Println("done",r.Instance.Id)
 
 	return
 }
@@ -95,23 +113,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	rawsrestoretime := os.Getenv("RDS_RESTORE_TIME")
-	if rdstime != nil {
-		funcError("Missing variable RDS_RESTORE_TIME (e.g. 2020-04-04T22:08:41+00:00)")
-	}
-	rdsrestoredate, err := time.Parse(time.RFC3339, rawrestoretime)
-	if err != nil {
-		funcError("Can't parse time format")
-	}
-	rdsrestoretime := rdsrestoredate.Unix()
-
-	rdsname := os.Getenv("RDS_RESTORE_DB")
-
-	if rdsname != nil {
-		funcError("Missing variable RDS_RESTORE_DB (e.g. mydb)")
-	}
-
-	rdsid := rdsGet(client, rdsname)
 
 	if os.Getenv("OS_AUTH_URL") == "" {
 		os.Setenv("OS_AUTH_URL", "https://iam.eu-de.otc.t-systems.com:443/v3")

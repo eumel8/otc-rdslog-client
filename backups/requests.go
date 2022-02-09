@@ -171,8 +171,8 @@ type RestoreToNewOpts struct {
 }
 
 type RestorePITROpts struct {
-	Source *Source `yaml:"source"`
-	Target *Target `yaml:"target"`
+	Source *Source `json:"source"`
+	Target *Target `json:"target"`
 }
 
 type Source struct {
@@ -219,7 +219,7 @@ func RestorePITR(c *golangsdk.ServiceClient, opts RestorePITROptsBuilder) (r Res
 		r.Err = err
 		return
 	}
-	_, r.Err = c.Post(instances.CreateURL(c) + "/restore", b, &r.Body, &golangsdk.RequestOpts{
+	_, r.Err = c.Post(instances.CreateURL(c) + "/recovery", b, &r.Body, &golangsdk.RequestOpts{
 		OkCodes: []int{200, 201, 202},
 	})
 	return

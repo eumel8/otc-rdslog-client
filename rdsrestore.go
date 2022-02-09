@@ -56,7 +56,7 @@ func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts
 	if err != nil {
 		funcError("Can't parse time format")
 	}
-	rdsrestoretime := rdsrestoredate.Unix()
+	rdsrestoretime := rdsrestoredate.UnixMilli()
 
 	rdsname := os.Getenv("RDS_RESTORE_DB")
 
@@ -112,7 +112,6 @@ func main() {
 		fmt.Println("version", AppVersion)
 		os.Exit(0)
 	}
-
 
 	if os.Getenv("OS_AUTH_URL") == "" {
 		os.Setenv("OS_AUTH_URL", "https://iam.eu-de.otc.t-systems.com:443/v3")

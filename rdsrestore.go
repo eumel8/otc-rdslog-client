@@ -7,8 +7,8 @@ import (
 	"github.com/gophercloud/utils/client"
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/backups"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
-	"hiller.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/backups"
 	"net/http"
 	"os"
 	"time"
@@ -18,14 +18,14 @@ const (
 	AppVersion = "0.0.1"
 )
 
-func funcError(e string) {
+func RdsError(e string) {
 	msg := errors.New(e)
 	fmt.Println("ERROR:", msg)
 	os.Exit(1)
 	return
 }
 
-func rdsGetName(client *gophercloud.ServiceClient, rdsName string) (*instances.RdsInstanceResponse, error) {
+func RdsGetName(client *gophercloud.ServiceClient, rdsName string) (*instances.RdsInstanceResponse, error) {
 
 	listOpts := instances.ListRdsInstanceOpts{
 		Name: rdsName,
@@ -35,49 +35,49 @@ func rdsGetName(client *gophercloud.ServiceClient, rdsName string) (*instances.R
 		return nil, err
 	}
 
-	n, err := instances.ExtractRdsInstances(allPages)
+	rdsList, err := instances.ExtractRdsInstances(allPages)
 	if err != nil {
 		return nil, err
 	}
-	if len(n.Instances) == 0 {
+	if len(rdsList.Instances) == 0 {
 		return nil, nil
 	}
-	return &n.Instances[0], nil
+	return &rdsList.Instances[0], nil
 }
 
-func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts) {
+func RdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts) {
 
-	rawrestoretime := os.Getenv("RDS_RESTORE_TIME")
-	if rawrestoretime == "" {
-		funcError("Missing variable RDS_RESTORE_TIME (e.g. 2020-04-04T22:08:41+00:00)")
+	rawRestoretime := os.Getenv("RDS_RESTORE_TIME")
+	if rawRestoretime == "" {
+		RdsError("Missing variable RDS_RESTORE_TIME (e.g. 2020-04-04T22:08:41+00:00)")
 	}
 
-	rdsrestoredate, err := time.Parse(time.RFC3339, rawrestoretime)
+	rdsRestoredate, err := time.Parse(time.RFC3339, rawRestoretime)
 	if err != nil {
-		funcError("Can't parse time format")
+		RdsError("Can't parse time format")
 	}
-	rdsrestoretime := rdsrestoredate.UnixMilli()
+	rdsRestoretime := rdsRestoredate.UnixMilli()
 
-	rdsname := os.Getenv("RDS_RESTORE_DB")
+	rdsName := os.Getenv("RDS_NAME")
 
-	if rdsname == "" {
-		funcError("Missing variable RDS_RESTORE_DB (e.g. mydb)")
+	if rdsName == "" {
+		RdsError("Missing variable RDS_NAME (e.g. mydb)")
 	}
 
-	rdsid,err := rdsGetName(client, rdsname)
+	rds, err := RdsGetName(client, rdsName)
 	restoreOpts := backups.RestorePITROpts{
 		Source: backups.Source{
-			InstanceID:  rdsid.Id,
-			RestoreTime: rdsrestoretime,
+			InstanceID:  rds.Id,
+			RestoreTime: rdsRestoretime,
 			Type:        "timestamp",
 		},
 		Target: backups.Target{
-			InstanceID: rdsid.Id,
+			InstanceID: rds.Id,
 		},
 	}
 
 	restoreResult := backups.RestorePITR(client, restoreOpts)
-	r, err := restoreResult.Extract()
+	restoredRds, err := restoreResult.Extract()
 	if err != nil {
 		panic(err)
 	}
@@ -91,7 +91,7 @@ func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts
 		panic(err)
 	}
 
-	fmt.Println("done",r.Instance.Id)
+	fmt.Println("done", restoredRds.Instance.Id)
 
 	return
 }
@@ -104,7 +104,7 @@ func main() {
 	flag.Parse()
 
 	if *help {
-		fmt.Println("Provide ENV variable to connect OTC: OS_PROJECT_NAME, OS_REGION_NAME, OS_AUTH_URL, OS_IDENTITY_API_VERSION, OS_USER_DOMAIN_NAME, OS_USERNAME, OS_PASSWORD")
+		fmt.Println("Provide ENV variable to connect OTC: OS_PROJECT_NAME, OS_REGION_NAME, OS_AUTH_URL, OS_IDENTITY_API_VERSION, OS_USER_DOMAIN_NAME, OS_USERNAME, OS_PASSWORD, RDS_NAME, RDS_RESTORE_TIME")
 		os.Exit(0)
 	}
 
@@ -153,7 +153,7 @@ func main() {
 		panic(err)
 	}
 
-	rdsRestore(rds, &backups.RestorePITROpts{})
+	RdsRestore(rds, &backups.RestorePITROpts{})
 	if err != nil {
 		panic(err)
 	}

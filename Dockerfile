@@ -10,7 +10,7 @@ RUN go mod download
 
 COPY *.go ./
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rds
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rdsrestore
 
 RUN adduser \    
     --disabled-password \    
@@ -23,12 +23,12 @@ RUN adduser \
 
 FROM scratch
 LABEL org.opencontainers.image.authors="f.kloeker@telekom.de"
-LABEL version="1.0.0"
-LABEL description="Create RDS instance in Open Telekom Cloud (OTC)"
+LABEL version="0.0.1"
+LABEL description="Restore RDS instance in Open Telekom Cloud (OTC)"
 
 WORKDIR /app
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
-COPY --from=builder /app/rds /app/rds
+COPY --from=builder /app/rdsrestore /app/rdsrestore
 USER appuser
-CMD ["/app/rds"]
+CMD ["/app/rdsrestore"]

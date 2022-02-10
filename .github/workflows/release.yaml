@@ -24,7 +24,7 @@ jobs:
         goversion: "https://dl.google.com/go/go1.17.6.linux-amd64.tar.gz"
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
-        binary_name: rds
+        binary_name: rdsrestore
         retry: 10
         sha256sum: true
         overwrite: true

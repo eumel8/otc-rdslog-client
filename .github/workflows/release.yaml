@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goversion: 1.17.6
         goos: [linux,windows,darwin]
         goarch: [amd64, arm64]
         exclude:
@@ -20,7 +19,7 @@ jobs:
     - uses: wangyoucao577/go-release-action@v1.22
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        goversion: 1.17.6
+        goversion: 1.16
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         binary_name: rds

@@ -213,13 +213,13 @@ func RestoreToNew(c *golangsdk.ServiceClient, opts RestoreToNewOptsBuilder) (r R
 	return
 }
 
-func RestorePITR(c *golangsdk.ServiceClient, id string, opts RestorePITROptsBuilder) (r RestoreResult) {
+func RestorePITR(c *golangsdk.ServiceClient, opts RestorePITROptsBuilder) (r RestoreResult) {
 	b, err := opts.ToPITRRestoreMap()
 	if err != nil {
 		r.Err = err
 		return
 	}
-	_, r.Err = c.Post(restoreURL(c,id), b, &r.Body, &golangsdk.RequestOpts{
+	_, r.Err = c.Post(restoreURL(c), b, &r.Body, &golangsdk.RequestOpts{
 		OkCodes: []int{200, 201, 202},
 	})
 	return

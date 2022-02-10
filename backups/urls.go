@@ -14,6 +14,6 @@ func resourceURL(c *golangsdk.ServiceClient, id string) string {
 	return c.ServiceURL("instances", id, "backups/policy")
 }
 
-func restoreURL(c *golangsdk.ServiceClient, id string) string {
-	return c.ServiceURL("instances", id, "recovery")
+func restoreURL(c *golangsdk.ServiceClient) string {
+	return c.ServiceURL("instances", "recovery")
 }

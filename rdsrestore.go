@@ -76,7 +76,7 @@ func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts
 		},
 	}
 
-	restoreResult := backups.RestorePITR(client, rdsid.Id, restoreOpts)
+	restoreResult := backups.RestorePITR(client, restoreOpts)
 	r, err := restoreResult.Extract()
 	if err != nil {
 		panic(err)

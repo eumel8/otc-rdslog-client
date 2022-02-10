@@ -66,12 +66,12 @@ func rdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts
 
 	rdsid,err := rdsGetName(client, rdsname)
 	restoreOpts := backups.RestorePITROpts{
-		Source: &backups.Source{
+		Source: backups.Source{
 			InstanceId:  rdsid.Id,
 			RestoreTime: rdsrestoretime,
 			Type:        "timestamp",
 		},
-		Target: &backups.Target{
+		Target: backups.Target{
 			InstanceId: rdsid.Id,
 		},
 	}

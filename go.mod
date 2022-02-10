@@ -1,6 +1,6 @@
 module rdsrestore.go
 
-go 1.17
+go 1.16
 
 require (
 	github.com/gophercloud/utils v0.0.0-20220209210848-d0ab9f2a8909

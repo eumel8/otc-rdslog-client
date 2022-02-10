@@ -19,8 +19,8 @@ export OS_PASSWORD=password
 provide RDS name and timestamp were you want to restore (in UTC)
 
 ```bash
-RDS_NAME=mydb
-RDS_RESTORE_TIME=2022-02-08T22:00:00+00:00
+export RDS_NAME=mydb
+export RDS_RESTORE_TIME=2022-02-08T22:00:00+00:00
 ```
 
 start program

@@ -1,6 +1,6 @@
-# otc-rdsrestore-client
+# otc-rdslog-client
 
-make a Point-In-Time-Recovery (PITR) of a RDS instance in OTC tenant based
+print out RDS logs to STDOUT
 
 
 ## usage
@@ -16,28 +16,19 @@ export OS_PROJECT_NAME=eu-de
 export OS_PASSWORD=password
 ```
 
-provide RDS name and timestamp were you want to restore (in UTC)
+provide RDS name 
 
 ```bash
 export RDS_NAME=mydb
-export RDS_RESTORE_TIME=2022-02-08T22:00:00+00:00
 ```
 
 start program
 
 ```bash
-$ ./rdsrestore
+$ ./rdsrestore -errorlogs
 ```
 
 That's it!
-
-verify result
-
-```bash
-$ openstack rds instance show mydb
-```
-
-refer [OTC API DOC](https://docs.otc.t-systems.com/api/rds/rds_01_0002.html)
 
 
 ## Credits

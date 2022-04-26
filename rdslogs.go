@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -73,9 +74,15 @@ func RdsErrorlog(client *gophercloud.ServiceClient) error {
 		err := fmt.Errorf("error getting rds errorlog: %v", err)
 		return err
 	}
-	// copier.Copy(&newRds.Events.Errorlog, &errorLogs.ErrorLogList)
-	fmt.Println("print the logs ",rds.Name)
-	fmt.Println(errorLogs.ErrorLogList)
+	// fmt.Println("print the logs ", rds.Name)
+
+	b, err := json.MarshalIndent(errorLogs.ErrorLogList, "", "  ")
+	if err != nil {
+		err := fmt.Errorf("error marshal errorlog: %v", err)
+		return err
+	}
+
+	fmt.Println(string(b))
 
 	return nil
 }

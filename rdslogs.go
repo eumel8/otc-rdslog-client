@@ -7,7 +7,6 @@ import (
 	"github.com/gophercloud/utils/client"
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/backups"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
 	"net/http"
 	"os"
@@ -45,66 +44,52 @@ func RdsGetName(client *gophercloud.ServiceClient, rdsName string) (*instances.R
 	return &rdsList.Instances[0], nil
 }
 
-func RdsRestore(client *gophercloud.ServiceClient, opts *backups.RestorePITROpts) {
-
-	rawRestoretime := os.Getenv("RDS_RESTORE_TIME")
-	if rawRestoretime == "" {
-		RdsError("Missing variable RDS_RESTORE_TIME (e.g. 2020-04-04T22:08:41+00:00)")
-	}
-
-	rdsRestoredate, err := time.Parse(time.RFC3339, rawRestoretime)
-	if err != nil {
-		RdsError("Can't parse time format")
-	}
-	rdsRestoretime := rdsRestoredate.UnixMilli()
-
+func RdsErrorlog(client *gophercloud.ServiceClient) error {
 	rdsName := os.Getenv("RDS_NAME")
-
 	if rdsName == "" {
-		RdsError("Missing variable RDS_NAME (e.g. mydb)")
+		err := fmt.Errorf("Missing variable RDS_NAME (e.f.mydb)")
+		return err
 	}
+
+	sd := time.Now().AddDate(0, -1, 0)
+	ed := time.Now()
+	start_date := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d+0000",
+		sd.Year(), sd.Month(), sd.Day(),
+		sd.Hour(), sd.Minute(), sd.Second())
+	end_date := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d+0000",
+		ed.Year(), ed.Month(), ed.Day(),
+		ed.Hour(), ed.Minute(), ed.Second())
 
 	rds, err := RdsGetName(client, rdsName)
-	restoreOpts := backups.RestorePITROpts{
-		Source: backups.Source{
-			InstanceID:  rds.Id,
-			RestoreTime: rdsRestoretime,
-			Type:        "timestamp",
-		},
-		Target: backups.Target{
-			InstanceID: rds.Id,
-		},
-	}
 
-	restoreResult := backups.RestorePITR(client, restoreOpts)
-	restoredRds, err := restoreResult.Extract()
+	errorLogOpts := instances.DbErrorlogOpts{StartDate: start_date, EndDate: end_date}
+	allPages, err := instances.ListErrorLog(client, errorLogOpts, rds.Id).AllPages()
 	if err != nil {
-		panic(err)
+		err := fmt.Errorf("error getting rds pages: %v", err)
+		return err
 	}
-
-	jobResponse, err := restoreResult.ExtractJobResponse()
+	errorLogs, err := instances.ExtractErrorLog(allPages)
 	if err != nil {
-		panic(err)
+		err := fmt.Errorf("error getting rds errorlog: %v", err)
+		return err
 	}
+	// copier.Copy(&newRds.Events.Errorlog, &errorLogs.ErrorLogList)
+	fmt.Println("print the logs ",rds.Name)
+	fmt.Println(errorLogs.ErrorLogList)
 
-	if err := instances.WaitForJobCompleted(client, int(1800), jobResponse.JobID); err != nil {
-		panic(err)
-	}
-
-	fmt.Println("done", restoredRds.Instance.Id)
-
-	return
+	return nil
 }
 
 func main() {
 
 	version := flag.Bool("version", false, "app version")
 	help := flag.Bool("help", false, "print out the help")
+	errorlog := flag.Bool("errorlog", false, "fetch errorlog")
 
 	flag.Parse()
 
 	if *help {
-		fmt.Println("Provide ENV variable to connect OTC: OS_PROJECT_NAME, OS_REGION_NAME, OS_AUTH_URL, OS_IDENTITY_API_VERSION, OS_USER_DOMAIN_NAME, OS_USERNAME, OS_PASSWORD, RDS_NAME, RDS_RESTORE_TIME")
+		fmt.Println("Provide ENV variable to connect OTC: OS_PROJECT_NAME, OS_REGION_NAME, OS_AUTH_URL, OS_IDENTITY_API_VERSION, OS_USER_DOMAIN_NAME, OS_USERNAME, OS_PASSWORD, RDS_NAME")
 		os.Exit(0)
 	}
 
@@ -139,7 +124,7 @@ func main() {
 		panic(err)
 	}
 
-	if os.Getenv("OS_DEBUG") != "" {
+	if os.Getenv("OS_DEBUG") == "1" {
 		provider.HTTPClient = http.Client{
 			Transport: &client.RoundTripper{
 				Rt:     &http.Transport{},
@@ -153,8 +138,10 @@ func main() {
 		panic(err)
 	}
 
-	RdsRestore(rds, &backups.RestorePITROpts{})
-	if err != nil {
-		panic(err)
+	if *errorlog {
+		err := RdsErrorlog(rds)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

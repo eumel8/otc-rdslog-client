@@ -29,6 +29,6 @@ LABEL description="Fetch Logs from RDS instance in Open Telekom Cloud (OTC)"
 WORKDIR /app
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
-COPY --from=builder /app/rdsrestore /app/rdsrestore
+COPY --from=builder /app/rdslogs /app/rdslogs
 USER appuser
 # CMD ["/app/rdslogs"]

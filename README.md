@@ -24,8 +24,17 @@ export RDS_NAME=mydb
 
 start program
 
+fetch errorlogs (last 30 days)
+
 ```bash
 $ ./rdsrestore -errorlogs
+```
+
+fetch slowlogs (last 30 days)
+
+
+```bash
+$ ./rdsrestore -slowlogs
 ```
 
 That's it!

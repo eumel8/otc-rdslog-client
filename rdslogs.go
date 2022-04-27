@@ -83,7 +83,46 @@ func RdsErrorlog(client *gophercloud.ServiceClient) error {
 	}
 
 	fmt.Println(string(b))
+	return nil
+}
 
+func RdsSlowlog(client *gophercloud.ServiceClient) error {
+	rdsName := os.Getenv("RDS_NAME")
+	if rdsName == "" {
+		err := fmt.Errorf("Missing variable RDS_NAME (e.f.mydb)")
+		return err
+	}
+
+	sd := time.Now().AddDate(0, -1, 0)
+	ed := time.Now()
+	start_date := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d+0000",
+		sd.Year(), sd.Month(), sd.Day(),
+		sd.Hour(), sd.Minute(), sd.Second())
+	end_date := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d+0000",
+		ed.Year(), ed.Month(), ed.Day(),
+		ed.Hour(), ed.Minute(), ed.Second())
+
+	rds, err := RdsGetName(client, rdsName)
+
+	slowLogOpts := instances.DbSlowlogOpts{StartDate: start_date, EndDate: end_date}
+	allPages, err := instances.ListSlowLog(client, slowLogOpts, rds.Id).AllPages()
+	if err != nil {
+		err := fmt.Errorf("error getting rds pages: %v", err)
+		return err
+	}
+	slowLogs, err := instances.ExtractSlowLog(allPages)
+	if err != nil {
+		err := fmt.Errorf("error getting rds slowlog: %v", err)
+		return err
+	}
+
+	b, err := json.MarshalIndent(slowLogs.SlowLogList, "", "  ")
+	if err != nil {
+		err := fmt.Errorf("error marshal slowlog: %v", err)
+		return err
+	}
+
+	fmt.Println(string(b))
 	return nil
 }
 
@@ -92,6 +131,7 @@ func main() {
 	version := flag.Bool("version", false, "app version")
 	help := flag.Bool("help", false, "print out the help")
 	errorlog := flag.Bool("errorlog", false, "fetch errorlog")
+	slowlog := flag.Bool("slowlog", false, "fetch slowlog")
 
 	flag.Parse()
 
@@ -147,6 +187,13 @@ func main() {
 
 	if *errorlog {
 		err := RdsErrorlog(rds)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if *slowlog {
+		err := RdsSlowlog(rds)
 		if err != nil {
 			panic(err)
 		}

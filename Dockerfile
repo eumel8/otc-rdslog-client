@@ -21,7 +21,8 @@ RUN adduser \
     --uid 1000 \    
     appuser
 
-FROM scratch
+# FROM scratch
+FROM alpine:3.15
 LABEL org.opencontainers.image.authors="f.kloeker@telekom.de"
 LABEL version="0.0.1"
 LABEL description="Fetch Logs from RDS instance in Open Telekom Cloud (OTC)"

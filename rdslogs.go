@@ -104,7 +104,7 @@ func RdsSlowlog(client *gophercloud.ServiceClient) error {
 
 	rds, err := RdsGetName(client, rdsName)
 
-	slowLogOpts := instances.DbSlowlogOpts{StartDate: start_date, EndDate: end_date}
+	slowLogOpts := instances.DbSlowLogOpts{StartDate: start_date, EndDate: end_date}
 	allPages, err := instances.ListSlowLog(client, slowLogOpts, rds.Id).AllPages()
 	if err != nil {
 		err := fmt.Errorf("error getting rds pages: %v", err)
@@ -116,7 +116,7 @@ func RdsSlowlog(client *gophercloud.ServiceClient) error {
 		return err
 	}
 
-	b, err := json.MarshalIndent(slowLogs.SlowLogList, "", "  ")
+	b, err := json.MarshalIndent(slowLogs.Slowloglist, "", "  ")
 	if err != nil {
 		err := fmt.Errorf("error marshal slowlog: %v", err)
 		return err

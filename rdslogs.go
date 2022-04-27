@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gophercloud/utils/client"
+	"github.com/opentelekomcloud/gophertelekomcloud/pagination"
 	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
@@ -105,12 +106,14 @@ func RdsSlowlog(client *gophercloud.ServiceClient) error {
 	rds, err := RdsGetName(client, rdsName)
 
 	slowLogOpts := instances.DbSlowLogOpts{StartDate: start_date, EndDate: end_date}
-	allPages, err := instances.ListSlowLog(client, slowLogOpts, rds.Id).AllPages()
+	// allPages, err := instances.ListSlowLog(client, slowLogOpts, rds.Id).AllPages()
+	allPages, err := ListMySlowLog(client, slowLogOpts, rds.Id).AllPages()
 	if err != nil {
 		err := fmt.Errorf("error getting rds pages: %v", err)
 		return err
 	}
-	slowLogs, err := instances.ExtractSlowLog(allPages)
+	// slowLogs, err := instances.ExtractSlowLog(allPages)
+	slowLogs, err := ExtractSlowLog(allPages)
 	if err != nil {
 		err := fmt.Errorf("error getting rds slowlog: %v", err)
 		return err
@@ -124,6 +127,64 @@ func RdsSlowlog(client *gophercloud.ServiceClient) error {
 
 	fmt.Println(string(b))
 	return nil
+}
+
+type ErrorLogPage struct {
+	pagination.SinglePageBase
+}
+
+type SlowLogPage struct {
+	pagination.SinglePageBase
+}
+
+type DbSlowLogBuilder interface {
+	ToDbSlowLogListQuery() (string, error)
+}
+
+type SlowLogResp struct {
+	Slowloglist []Slowloglist `json:"slow_log_list"`
+	TotalRecord int           `json:"total_record"`
+}
+
+type Slowloglist struct {
+	Count        string `json:"count"`
+	Time         string `json:"time"`
+	Locktime     string `json:"lock_time"`
+	Rowssent     string `json:"rows_sent"`
+	Rowsexamined string `json:"rows_examined"`
+	Database     string `json:"database"`
+	Users        string `json:"users"`
+	QuerySample  string `json:"query_sample"`
+	Type         string `json:"type"`
+}
+
+func ExtractSlowLog(r pagination.Page) (SlowLogResp, error) {
+	var s SlowLogResp
+	err := (r.(SlowLogPage)).ExtractInto(&s)
+	return s, err
+}
+
+func listslowlogURL(c *gophercloud.ServiceClient, instanceID string) string {
+	return c.ServiceURL("instances", instanceID, "slowlog")
+}
+
+func ListMySlowLog(client *gophercloud.ServiceClient, opts DbSlowLogBuilder, instanceID string) pagination.Pager {
+	url := listslowlogURL(client, instanceID)
+	if opts != nil {
+		query, err := opts.ToDbSlowLogListQuery()
+		if err != nil {
+			return pagination.Pager{Err: err}
+		}
+		url += query
+	}
+
+	pageRdsList := pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
+		return SlowLogPage{pagination.SinglePageBase(r)}
+	})
+
+	rdsheader := map[string]string{"Content-Type": "application/json"}
+	pageRdsList.Headers = rdsheader
+	return pageRdsList
 }
 
 func main() {

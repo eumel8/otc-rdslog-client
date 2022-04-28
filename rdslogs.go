@@ -5,14 +5,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/gophercloud/utils/client"
-	"github.com/opentelekomcloud/gophertelekomcloud/pagination"
-	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/gophercloud/utils/client"
+	gophercloud "github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/rds/v3/instances"
+	"github.com/opentelekomcloud/gophertelekomcloud/pagination"
 )
 
 const (
@@ -205,23 +206,6 @@ func main() {
 		fmt.Println("version", AppVersion)
 		os.Exit(0)
 	}
-
-	if os.Getenv("OS_AUTH_URL") == "" {
-		os.Setenv("OS_AUTH_URL", "https://iam.eu-de.otc.t-systems.com:443/v3")
-	}
-
-	if os.Getenv("OS_IDENTITY_API_VERSION") == "" {
-		os.Setenv("OS_IDENTITY_API_VERSION", "3")
-	}
-
-	if os.Getenv("OS_REGION_NAME") == "" {
-		os.Setenv("OS_REGION_NAME", "eu-de")
-	}
-
-	if os.Getenv("OS_PROJECT_NAME") == "" {
-		os.Setenv("OS_PROJECT_NAME", "eu-de")
-	}
-
 	opts, err := openstack.AuthOptionsFromEnv()
 	if err != nil {
 		panic(err)

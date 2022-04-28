@@ -15,6 +15,12 @@ export OS_USER_DOMAIN_NAME=OTC-EU-DE-00000000000000000001
 export OS_PROJECT_NAME=eu-de
 export OS_PASSWORD=password
 ```
+or:
+
+```bash
+export OS_AUTH_URL=https://iam.eu-de.otc.t-systems.com:443/v3
+export OS_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 provide RDS name 
 
